@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f172a">
-  <title>Cámara en Vivo</title>
+  <title>Cámara en Vivo + IR</title>
   <style>
     * {
       margin: 0;
@@ -27,7 +27,7 @@
     }
 
     header {
-      padding: 12px 16px;
+      padding: 10px 16px;
       background: rgba(15, 23, 42, 0.95);
       backdrop-filter: blur(10px);
       text-align: center;
@@ -36,7 +36,7 @@
     }
 
     header h1 {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: 0.5px;
       display: flex;
@@ -75,6 +75,19 @@
       display: block;
     }
 
+    #canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    #canvas.active {
+      display: block;
+    }
+
     /* Botón de cambio de cámara */
     .switch-btn {
       position: absolute;
@@ -101,22 +114,97 @@
       background: rgba(0, 0, 0, 0.8);
     }
 
-    /* Botones inferiores */
+    /* Indicador de modo activo */
+    .mode-badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.9);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(6px);
+      z-index: 5;
+      display: none;
+      text-transform: uppercase;
+    }
+
+    .mode-badge.show { display: block; }
+
+    /* Panel de filtros (scroll horizontal) */
+    .filters-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      overflow-x: auto;
+      scrollbar-width: none;
+      z-index: 10;
+    }
+
+    .filters-bar::-webkit-scrollbar { display: none; }
+
+    .filter-btn {
+      flex-shrink: 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #e2e8f0;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      min-width: 78px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .filter-btn .emoji {
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .filter-btn:active {
+      transform: scale(0.95);
+    }
+
+    .filter-btn.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      color: #fff;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+    }
+
+    .filter-btn.reset.active {
+      background: #64748b;
+      border-color: #94a3b8;
+      box-shadow: 0 0 0 2px rgba(100,116,139,0.3);
+    }
+
+    /* Controles inferiores */
     .controls {
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 20px;
-      padding: 16px;
+      padding: 14px 16px 18px;
       background: rgba(15, 23, 42, 0.95);
       backdrop-filter: blur(10px);
-      border-top: 1px solid rgba(255,255,255,0.1);
       z-index: 10;
     }
 
     .capture-btn {
-      width: 68px;
-      height: 68px;
+      width: 66px;
+      height: 66px;
       border-radius: 50%;
       background: #fff;
       border: 4px solid rgba(255,255,255,0.35);
@@ -133,19 +221,7 @@
       border: 2px solid #0f172a;
     }
 
-    .capture-btn:active {
-      transform: scale(0.92);
-    }
-
-    .capture-btn.flash {
-      animation: flash 0.3s;
-    }
-
-    @keyframes flash {
-      0% { background: #fff; }
-      50% { background: #94a3b8; }
-      100% { background: #fff; }
-    }
+    .capture-btn:active { transform: scale(0.92); }
 
     /* Pantallas de estado */
     .overlay {
@@ -193,12 +269,13 @@
       cursor: pointer;
       transition: background 0.2s, transform 0.15s;
       min-width: 180px;
+      font-family: inherit;
     }
 
     .btn:active { transform: scale(0.96); }
     .btn:hover { background: #2563eb; }
 
-    /* Notificación de captura */
+    /* Toast */
     .toast {
       position: absolute;
       bottom: 90px;
@@ -223,11 +300,14 @@
     }
 
     /* Modo landscape */
-    @media (orientation: landscape) and (max-height: 500px) {
-      header { padding: 6px 12px; }
-      header h1 { font-size: 0.8rem; }
+    @media (orientation: landscape) and (max-height: 560px) {
+      header { padding: 4px 12px; }
+      header h1 { font-size: 0.75rem; }
+      .filters-bar { padding: 6px 10px; }
+      .filter-btn { padding: 6px 10px; min-width: 64px; font-size: 0.7rem; }
+      .filter-btn .emoji { font-size: 0.95rem; }
       .controls { padding: 8px; }
-      .capture-btn { width: 54px; height: 54px; }
+      .capture-btn { width: 52px; height: 52px; }
     }
   </style>
 </head>
@@ -239,16 +319,17 @@
 
   <div class="camera-container">
     <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
 
-    <!-- Botón cambiar cámara -->
+    <div class="mode-badge" id="modeBadge">Modo: Original</div>
+
     <button class="switch-btn" id="switchBtn" title="Cambiar cámara" aria-label="Cambiar cámara">
       🔄
     </button>
 
-    <!-- Toast de confirmación -->
     <div class="toast" id="toast">📸 Foto capturada</div>
 
-    <!-- Pantalla inicial / Permisos -->
+    <!-- Overlay inicial -->
     <div class="overlay" id="startOverlay">
       <div class="icon">📷</div>
       <h2>Acceso a la Cámara</h2>
@@ -256,7 +337,7 @@
       <button class="btn" id="startBtn">Activar Cámara</button>
     </div>
 
-    <!-- Pantalla de error -->
+    <!-- Overlay de error -->
     <div class="overlay hidden" id="errorOverlay">
       <div class="icon">⚠️</div>
       <h2>No se pudo acceder a la cámara</h2>
@@ -265,12 +346,45 @@
     </div>
   </div>
 
+  <!-- Barra de filtros -->
+  <div class="filters-bar" id="filtersBar">
+    <button class="filter-btn active" data-mode="original">
+      <span class="emoji">🎨</span>
+      <span>Original</span>
+    </button>
+    <button class="filter-btn" data-mode="thermal">
+      <span class="emoji">🔥</span>
+      <span>Térmico</span>
+    </button>
+    <button class="filter-btn" data-mode="night">
+      <span class="emoji">🌙</span>
+      <span>Nocturno</span>
+    </button>
+    <button class="filter-btn" data-mode="infrared">
+      <span class="emoji">🟣</span>
+      <span>IR Falso</span>
+    </button>
+    <button class="filter-btn" data-mode="bw">
+      <span class="emoji">⚫</span>
+      <span>B/N IR</span>
+    </button>
+    <button class="filter-btn reset" data-mode="reset">
+      <span class="emoji">↺</span>
+      <span>Reset</span>
+    </button>
+  </div>
+
+  <!-- Controles -->
   <div class="controls">
     <button class="capture-btn" id="captureBtn" aria-label="Capturar foto"></button>
   </div>
 
 <script>
+  // ===== Elementos =====
   const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
   const startOverlay = document.getElementById('startOverlay');
   const errorOverlay = document.getElementById('errorOverlay');
   const errorMsg = document.getElementById('errorMsg');
@@ -279,26 +393,41 @@
   const switchBtn = document.getElementById('switchBtn');
   const captureBtn = document.getElementById('captureBtn');
   const toast = document.getElementById('toast');
+  const modeBadge = document.getElementById('modeBadge');
+  const filtersBar = document.getElementById('filtersBar');
 
+  // ===== Estado =====
   let currentStream = null;
-  let facingMode = 'environment'; // 'environment' (trasera) | 'user' (frontal)
+  let facingMode = 'environment';
   let hasMultipleCameras = false;
+  let currentMode = 'original';   // original | thermal | night | infrared | bw
+  let animationId = null;
+  let frameCanvas = document.createElement('canvas'); // buffer offscreen
+  let frameCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
 
-  // Detectar cantidad de cámaras disponibles
+  // ===== Etiquetas de modo =====
+  const MODE_LABELS = {
+    original: 'Original',
+    thermal:  'Térmico',
+    night:    'Visión Nocturna',
+    infrared: 'IR Falso',
+    bw:       'B/N Infrarrojo'
+  };
+
+  // ===== Detección de cámaras =====
   async function detectCameras() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cams = devices.filter(d => d.kind === 'videoinput');
       hasMultipleCameras = cams.length > 1;
       switchBtn.style.display = hasMultipleCameras ? 'flex' : 'none';
-    } catch (e) {
+    } catch {
       switchBtn.style.display = 'none';
     }
   }
 
-  // Iniciar la cámara
+  // ===== Iniciar cámara =====
   async function startCamera() {
-    // Detener cualquier stream previo
     if (currentStream) {
       currentStream.getTracks().forEach(t => t.stop());
       currentStream = null;
@@ -317,82 +446,289 @@
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       currentStream = stream;
       video.srcObject = stream;
-
-      // Esperar a que el video esté listo
       await video.play().catch(() => {});
 
-      // Ocultar overlays
       startOverlay.classList.add('hidden');
       errorOverlay.classList.add('hidden');
-
       await detectCameras();
+      applyMode(currentMode);
     } catch (err) {
-      console.error('Error al acceder a la cámara:', err);
+      console.error(err);
       let msg = 'No se pudo acceder a la cámara.';
-      if (err.name === 'NotAllowedError') {
-        msg = 'Permiso denegado. Habilita el acceso a la cámara en la configuración de tu navegador.';
-      } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
-        msg = 'No se encontró ninguna cámara disponible en este dispositivo.';
-      } else if (err.name === 'NotReadableError') {
-        msg = 'La cámara está siendo usada por otra aplicación.';
-      } else if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        msg = 'La cámara requiere HTTPS. Sube el sitio a GitHub Pages para usar esta función.';
-      }
+      if (err.name === 'NotAllowedError') msg = 'Permiso denegado. Habilita el acceso a la cámara.';
+      else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') msg = 'No se encontró ninguna cámara disponible.';
+      else if (err.name === 'NotReadableError') msg = 'La cámara está siendo usada por otra aplicación.';
+      else if (location.protocol !== 'https:' && location.hostname !== 'localhost') msg = 'La cámara requiere HTTPS. Sube el sitio a GitHub Pages.';
       errorMsg.textContent = msg;
       startOverlay.classList.add('hidden');
       errorOverlay.classList.remove('hidden');
     }
   }
 
-  // Capturar fotografía
-  function capturePhoto() {
-    if (!currentStream) return;
+  // ===== Aplicar modo =====
+  function applyMode(mode) {
+    if (mode === 'reset') mode = 'original';
+    currentMode = mode;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
+    // UI: botones activos
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+
+    // Badge
+    if (mode === 'original') {
+      modeBadge.classList.remove('show');
+    } else {
+      modeBadge.textContent = 'Modo: ' + MODE_LABELS[mode];
+      modeBadge.classList.add('show');
+    }
+
+    // Mostrar canvas u ocultar según modo
+    if (mode === 'original') {
+      canvas.classList.remove('active');
+      stopRenderLoop();
+    } else {
+      canvas.classList.add('active');
+      startRenderLoop();
+    }
+  }
+
+  // ===== Loop de renderizado =====
+  function startRenderLoop() {
+    stopRenderLoop();
+    const loop = () => {
+      renderFrame();
+      animationId = requestAnimationFrame(loop);
+    };
+    animationId = requestAnimationFrame(loop);
+  }
+
+  function stopRenderLoop() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }
+
+  // ===== Renderizar un frame con el filtro activo =====
+  function renderFrame() {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return;
+
+    // Ajustar tamaño del canvas de salida al contenedor
+    const container = canvas.parentElement;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+    }
+
+    // Buffer del tamaño del video
+    if (frameCanvas.width !== vw || frameCanvas.height !== vh) {
+      frameCanvas.width = vw;
+      frameCanvas.height = vh;
+    }
+
+    // Dibujar video al buffer
+    frameCtx.drawImage(video, 0, 0, vw, vh);
+
+    // Procesar píxeles
+    const imageData = frameCtx.getImageData(0, 0, vw, vh);
+    const data = imageData.data;
+
+    switch (currentMode) {
+      case 'thermal':  applyThermal(data);  break;
+      case 'night':    applyNight(data);    break;
+      case 'infrared': applyInfrared(data); break;
+      case 'bw':       applyBW(data);       break;
+    }
+
+    frameCtx.putImageData(imageData, 0, 0);
+
+    // Dibujar al canvas visible (escalado cover)
+    ctx.save();
+    ctx.clearRect(0, 0, cw, ch);
+
+    // Escalado tipo "cover"
+    const scale = Math.max(cw / vw, ch / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
 
     // Reflejar si es cámara frontal
     if (facingMode === 'user') {
-      ctx.translate(canvas.width, 0);
+      ctx.translate(cw, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob(blob => {
+    ctx.drawImage(frameCanvas, dx, dy, dw, dh);
+    ctx.restore();
+  }
+
+  // ===== Filtros =====
+  // 1) TÉRMICO: mapea brillo a paleta iron (negro → azul → rojo → amarillo → blanco)
+  function applyThermal(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      // Luminancia
+      const lum = 0.299*r + 0.587*g + 0.114*b;
+      const t = lum / 255; // 0..1
+
+      // Paleta térmica por tramos
+      let nr, ng, nb;
+      if (t < 0.25) {
+        const k = t / 0.25;
+        nr = 0; ng = 0; nb = Math.round(128 * k);
+      } else if (t < 0.5) {
+        const k = (t - 0.25) / 0.25;
+        nr = 0; ng = Math.round(255 * k); nb = Math.round(128 + 127 * k);
+      } else if (t < 0.75) {
+        const k = (t - 0.5) / 0.25;
+        nr = Math.round(255 * k); ng = 255; nb = Math.round(255 * (1 - k));
+      } else {
+        const k = (t - 0.75) / 0.25;
+        nr = 255; ng = 255; nb = Math.round(255 * k);
+      }
+
+      data[i] = nr; data[i+1] = ng; data[i+2] = nb;
+    }
+  }
+
+  // 2) VISIÓN NOCTURNA: verde fósforo + boost de brillo + contraste
+  function applyNight(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      let lum = 0.299*r + 0.587*g + 0.114*b;
+      // Boost de brillo y contraste
+      lum = Math.min(255, lum * 1.4);
+      lum = ((lum - 128) * 1.3) + 128;
+      lum = Math.max(0, Math.min(255, lum));
+
+      data[i]   = Math.round(lum * 0.15); // poco rojo
+      data[i+1] = Math.round(lum);        // verde dominante
+      data[i+2] = Math.round(lum * 0.25); // poco azul
+    }
+  }
+
+  // 3) INFRARROJO FALSO: tonos magenta/rojizos + alto contraste
+  function applyInfrared(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      let lum = 0.299*r + 0.587*g + 0.114*b;
+      // Contraste fuerte
+      lum = ((lum - 128) * 1.5) + 128;
+      lum = Math.max(0, Math.min(255, lum));
+
+      // Tinte magenta: R alto, B medio-alto, G bajo
+      data[i]   = Math.min(255, Math.round(lum * 1.15));
+      data[i+1] = Math.round(lum * 0.35);
+      data[i+2] = Math.min(255, Math.round(lum * 0.9));
+    }
+  }
+
+  // 4) B/N INFRARROJO: blanco y negro de alto contraste (look IR clásico)
+  function applyBW(data) {
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      let lum = 0.299*r + 0.587*g + 0.114*b;
+      // Curva S para contraste dramático
+      lum = lum / 255;
+      lum = lum * lum * (3 - 2 * lum); // smoothstep
+      lum = Math.max(0, Math.min(255, lum * 255 * 1.1));
+      data[i] = data[i+1] = data[i+2] = lum;
+    }
+  }
+
+  // ===== Captura de foto =====
+  function capturePhoto() {
+    if (!currentStream) return;
+
+    // Si estamos en modo original, capturamos el video
+    // Si estamos en modo filtro, capturamos el canvas ya procesado
+    let sourceCanvas;
+    if (currentMode === 'original') {
+      sourceCanvas = document.createElement('canvas');
+      sourceCanvas.width = video.videoWidth;
+      sourceCanvas.height = video.videoHeight;
+      const c = sourceCanvas.getContext('2d');
+      if (facingMode === 'user') {
+        c.translate(sourceCanvas.width, 0);
+        c.scale(-1, 1);
+      }
+      c.drawImage(video, 0, 0, sourceCanvas.width, sourceCanvas.height);
+    } else {
+      // Usar el frame procesado a resolución completa
+      sourceCanvas = document.createElement('canvas');
+      sourceCanvas.width = video.videoWidth;
+      sourceCanvas.height = video.videoHeight;
+      const c = sourceCanvas.getContext('2d');
+      // Volver a procesar el frame actual a full res
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = video.videoWidth;
+      tempCanvas.height = video.videoHeight;
+      const tctx = tempCanvas.getContext('2d', { willReadFrequently: true });
+      tctx.drawImage(video, 0, 0);
+      const imgData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      switch (currentMode) {
+        case 'thermal':  applyThermal(imgData.data);  break;
+        case 'night':    applyNight(imgData.data);    break;
+        case 'infrared': applyInfrared(imgData.data); break;
+        case 'bw':       applyBW(imgData.data);       break;
+      }
+      tctx.putImageData(imgData, 0, 0);
+
+      if (facingMode === 'user') {
+        c.translate(sourceCanvas.width, 0);
+        c.scale(-1, 1);
+      }
+      c.drawImage(tempCanvas, 0, 0);
+    }
+
+    sourceCanvas.toBlob(blob => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `foto_${Date.now()}.jpg`;
+      const suffix = currentMode === 'original' ? '' : `_${currentMode}`;
+      a.download = `foto${suffix}_${Date.now()}.jpg`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-      // Feedback visual
-      captureBtn.classList.add('flash');
-      setTimeout(() => captureBtn.classList.remove('flash'), 300);
-
+      toast.textContent = currentMode === 'original'
+        ? '📸 Foto capturada'
+        : `📸 Foto capturada (${MODE_LABELS[currentMode]})`;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 1500);
     }, 'image/jpeg', 0.92);
   }
 
-  // Cambiar entre cámara frontal y trasera
+  // ===== Cambiar cámara =====
   async function switchCamera() {
     facingMode = facingMode === 'environment' ? 'user' : 'environment';
     await startCamera();
-    // Reflejar video si es frontal
-    video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
   }
 
-  // Detener la cámara al salir de la página
+  // ===== Eventos =====
+  startBtn.addEventListener('click', startCamera);
+  retryBtn.addEventListener('click', startCamera);
+  switchBtn.addEventListener('click', switchCamera);
+  captureBtn.addEventListener('click', capturePhoto);
+
+  filtersBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    applyMode(btn.dataset.mode);
+  });
+
+  // Detener al salir
   window.addEventListener('beforeunload', () => {
-    if (currentStream) {
-      currentStream.getTracks().forEach(t => t.stop());
-    }
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    stopRenderLoop();
   });
 
   // Pausar/reanudar al cambiar visibilidad
@@ -400,16 +736,12 @@
     if (!currentStream) return;
     if (document.hidden) {
       currentStream.getVideoTracks().forEach(t => t.enabled = false);
+      stopRenderLoop();
     } else {
       currentStream.getVideoTracks().forEach(t => t.enabled = true);
+      if (currentMode !== 'original') startRenderLoop();
     }
   });
-
-  // Eventos
-  startBtn.addEventListener('click', startCamera);
-  retryBtn.addEventListener('click', startCamera);
-  switchBtn.addEventListener('click', switchCamera);
-  captureBtn.addEventListener('click', capturePhoto);
 
   // Prevenir zoom con doble toque en iOS
   document.addEventListener('gesturestart', e => e.preventDefault());
