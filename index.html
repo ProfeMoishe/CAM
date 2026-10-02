@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <title>Cámara en Vivo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #fff;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 12px 16px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .camera-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Botón de cambio de cámara */
+    .switch-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: transform 0.2s, background 0.2s;
+      z-index: 5;
+    }
+
+    .switch-btn:active {
+      transform: scale(0.9);
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Botones inferiores */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      z-index: 10;
+    }
+
+    .capture-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: #fff;
+      border: 4px solid rgba(255,255,255,0.35);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s;
+    }
+
+    .capture-btn::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      border: 2px solid #0f172a;
+    }
+
+    .capture-btn:active {
+      transform: scale(0.92);
+    }
+
+    .capture-btn.flash {
+      animation: flash 0.3s;
+    }
+
+    @keyframes flash {
+      0% { background: #fff; }
+      50% { background: #94a3b8; }
+      100% { background: #fff; }
+    }
+
+    /* Pantallas de estado */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background: #0f172a;
+      z-index: 20;
+      gap: 16px;
+    }
+
+    .overlay.hidden { display: none; }
+
+    .overlay .icon {
+      font-size: 56px;
+      margin-bottom: 8px;
+    }
+
+    .overlay h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+
+    .overlay p {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .btn {
+      margin-top: 8px;
+      padding: 14px 28px;
+      border-radius: 999px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      min-width: 180px;
+    }
+
+    .btn:active { transform: scale(0.96); }
+    .btn:hover { background: #2563eb; }
+
+    /* Notificación de captura */
+    .toast {
+      position: absolute;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(34, 197, 94, 0.95);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 30;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Modo landscape */
+    @media (orientation: landscape) and (max-height: 500px) {
+      header { padding: 6px 12px; }
+      header h1 { font-size: 0.8rem; }
+      .controls { padding: 8px; }
+      .capture-btn { width: 54px; height: 54px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1><span class="live-dot"></span> Cámara en Vivo</h1>
+  </header>
+
+  <div class="camera-container">
+    <video id="video" autoplay playsinline muted></video>
+
+    <!-- Botón cambiar cámara -->
+    <button class="switch-btn" id="switchBtn" title="Cambiar cámara" aria-label="Cambiar cámara">
+      🔄
+    </button>
+
+    <!-- Toast de confirmación -->
+    <div class="toast" id="toast">📸 Foto capturada</div>
+
+    <!-- Pantalla inicial / Permisos -->
+    <div class="overlay" id="startOverlay">
+      <div class="icon">📷</div>
+      <h2>Acceso a la Cámara</h2>
+      <p>Para mostrar la cámara en tiempo real, necesitamos tu permiso. Asegúrate de estar en una conexión segura (HTTPS).</p>
+      <button class="btn" id="startBtn">Activar Cámara</button>
+    </div>
+
+    <!-- Pantalla de error -->
+    <div class="overlay hidden" id="errorOverlay">
+      <div class="icon">⚠️</div>
+      <h2>No se pudo acceder a la cámara</h2>
+      <p id="errorMsg">Verifica los permisos de tu navegador.</p>
+      <button class="btn" id="retryBtn">Reintentar</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="capture-btn" id="captureBtn" aria-label="Capturar foto"></button>
+  </div>
+
+<script>
+  const video = document.getElementById('video');
+  const startOverlay = document.getElementById('startOverlay');
+  const errorOverlay = document.getElementById('errorOverlay');
+  const errorMsg = document.getElementById('errorMsg');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const switchBtn = document.getElementById('switchBtn');
+  const captureBtn = document.getElementById('captureBtn');
+  const toast = document.getElementById('toast');
+
+  let currentStream = null;
+  let facingMode = 'environment'; // 'environment' (trasera) | 'user' (frontal)
+  let hasMultipleCameras = false;
+
+  // Detectar cantidad de cámaras disponibles
+  async function detectCameras() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      hasMultipleCameras = cams.length > 1;
+      switchBtn.style.display = hasMultipleCameras ? 'flex' : 'none';
+    } catch (e) {
+      switchBtn.style.display = 'none';
+    }
+  }
+
+  // Iniciar la cámara
+  async function startCamera() {
+    // Detener cualquier stream previo
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+      currentStream = null;
+    }
+
+    const constraints = {
+      video: {
+        facingMode: { ideal: facingMode },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    };
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      currentStream = stream;
+      video.srcObject = stream;
+
+      // Esperar a que el video esté listo
+      await video.play().catch(() => {});
+
+      // Ocultar overlays
+      startOverlay.classList.add('hidden');
+      errorOverlay.classList.add('hidden');
+
+      await detectCameras();
+    } catch (err) {
+      console.error('Error al acceder a la cámara:', err);
+      let msg = 'No se pudo acceder a la cámara.';
+      if (err.name === 'NotAllowedError') {
+        msg = 'Permiso denegado. Habilita el acceso a la cámara en la configuración de tu navegador.';
+      } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
+        msg = 'No se encontró ninguna cámara disponible en este dispositivo.';
+      } else if (err.name === 'NotReadableError') {
+        msg = 'La cámara está siendo usada por otra aplicación.';
+      } else if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        msg = 'La cámara requiere HTTPS. Sube el sitio a GitHub Pages para usar esta función.';
+      }
+      errorMsg.textContent = msg;
+      startOverlay.classList.add('hidden');
+      errorOverlay.classList.remove('hidden');
+    }
+  }
+
+  // Capturar fotografía
+  function capturePhoto() {
+    if (!currentStream) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+
+    // Reflejar si es cámara frontal
+    if (facingMode === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `foto_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      // Feedback visual
+      captureBtn.classList.add('flash');
+      setTimeout(() => captureBtn.classList.remove('flash'), 300);
+
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    }, 'image/jpeg', 0.92);
+  }
+
+  // Cambiar entre cámara frontal y trasera
+  async function switchCamera() {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    await startCamera();
+    // Reflejar video si es frontal
+    video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  }
+
+  // Detener la cámara al salir de la página
+  window.addEventListener('beforeunload', () => {
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+    }
+  });
+
+  // Pausar/reanudar al cambiar visibilidad
+  document.addEventListener('visibilitychange', () => {
+    if (!currentStream) return;
+    if (document.hidden) {
+      currentStream.getVideoTracks().forEach(t => t.enabled = false);
+    } else {
+      currentStream.getVideoTracks().forEach(t => t.enabled = true);
+    }
+  });
+
+  // Eventos
+  startBtn.addEventListener('click', startCamera);
+  retryBtn.addEventListener('click', startCamera);
+  switchBtn.addEventListener('click', switchCamera);
+  captureBtn.addEventListener('click', capturePhoto);
+
+  // Prevenir zoom con doble toque en iOS
+  document.addEventListener('gesturestart', e => e.preventDefault());
+</script>
+
+</body>
+</html>
